@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 import urllib.request
 import re
 
+# TODO: need to grab push the button/tune of the week or w/e tags
+
 # takes list of bs4.element.Tag's and returns
 # dict mapping episode num -> <a> tag links
 def get_links_dict(link_tags):
@@ -28,13 +30,17 @@ def get_links_dict(link_tags):
 # given the soup for an episode-page
 # returns the title of episode
 def get_title(soup):
-	title_tag = soup.select("h2.title")[0]
-	title = title_tag.get_text().strip() 
+	title = ""
 
-	# remove [] from end of title
-	title_m = re.search('(.*?)\[.*?\]', title)
-	if title_m:
-		title = title_m.group(1)
+	title_tag = soup.select("h2.title")
+	if title_tag:
+		title_tag = title_tag[0]
+		title = title_tag.get_text().strip() 
+
+		# remove [] from end of title
+		title_m = re.search('(.*?)\[.*?\]', title)
+		if title_m:
+			title = title_m.group(1)
 
 	return title
 
@@ -78,20 +84,24 @@ try:
 		links = get_links_dict(link_tags)
 		print(links.keys())
 
-		episode_num = 2
-		print("Episode:", episode_num)
-		tag = links[episode_num]
-		print("Tag:", tag)
+		for episode_num in links:
+			print("Episode:", episode_num)
+			tag = links[episode_num]
+			print("Tag:", tag)
 
-		episode_url = BASE_URL + tag["href"]
-		with urllib.request.urlopen(episode_url) as episode_page:
-			print("Opened episode page: ", episode_url)
+			episode_url = BASE_URL + tag["href"]
+			with urllib.request.urlopen(episode_url) as episode_page:
+				print("Opened episode page: ", episode_url)
 
-			episode_soup = BeautifulSoup(episode_page.read())
+				episode_soup = BeautifulSoup(episode_page.read())
 
-			print(get_title(episode_soup))
-			for track in get_tracks(episode_soup):
-				print(track)
+				filename = "abgt_" + str(episode_num) + ".txt"
+				with open(filename, "w") as f:
+					f.write(get_title(episode_soup))
+					f.write("\n")
+					for track in get_tracks(episode_soup):
+						f.write(track)
+						f.write("\n")
 
 except urllib.error.HTTPError:
 	print("ERROR: Could not open URL '" + full_url + "'")
